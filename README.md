@@ -2,7 +2,8 @@
 
 This repo aims at re-implementing in Python the algorithms presented in the following paper:
 
-*D. Khuê Lê-Huu and Nikos Paragios. **Continuous Relaxation of MAP Inference: A Nonconvex Perspective**. IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2018.*
+*D. Khuê Lê-Huu and Nikos Paragios. **Continuous Relaxation of MAP Inference: A Nonconvex Perspective**.
+IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2018.*
 
 If you use any part of this code, please cite the above paper.
 
@@ -22,5 +23,5 @@ Example of usage is given in `example.py`.
 ## Notes
 In the current version:
 * Only pairwise (i.e. first-order) MRFs are supported.
-* Only ADMM with `argmax` rounding is implemented (which is suboptimal).
+* Only ADMM with `argmax` rounding is implemented (which is suboptimal). The other methods and Block Coordinate Descent rounding will be added later.
 * No performance optimization.
