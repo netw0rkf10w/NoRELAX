@@ -68,5 +68,8 @@ def main():
     labels = mrf.optimize(method='admm', **kwargs)
     print('labels =', labels)
 
+    E = mrf.energy(labels)
+    print('Discrete energy = %f'%E)
+
 if __name__ == "__main__":
     main()

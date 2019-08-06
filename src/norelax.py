@@ -119,9 +119,6 @@ class MRF():
             labels = self.BCD(X0, **kwargs)
         else:
             raise "Method %s not supported!"%method
-        
-        E = self.energy(labels)
-        print('Discrete energy = %f'%E)
 
         return labels
 
@@ -237,9 +234,10 @@ class MRF():
                     else:
                         break
         # Continuous energy
-        e_continuous = self.energy_continuous(X1)
-        print('Continuous energy = %f'%e_continuous)
-        # print('Assignment matrix =', X1)
+        if verbose:
+            e_continuous = self.energy_continuous(X1)
+            print('Continuous energy = %f'%e_continuous)
+            # print('Assignment matrix =', X1)
 
         labels = self.BCD(X1)
         return labels
