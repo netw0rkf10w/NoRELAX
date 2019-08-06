@@ -28,8 +28,8 @@ from norelax import MRF
 def main():
     # Initialize the MRF with the number of nodes/labels
     # By default, sparse=True.
-    V = 4
-    L = 3
+    V = 4 # number of nodes
+    L = 3 # number of labels per node
     mrf = MRF(num_nodes=V, num_labels=L, sparse=True)
 
     # Set the node potentials, which is the flatten vector
