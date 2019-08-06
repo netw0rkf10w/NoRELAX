@@ -23,7 +23,7 @@ but WITHOUT ANY WARRANTY, without even the implied
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 """
 import numpy as np
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix, lil_matrix, dok_matrix
 
 from simplex_projection import unit_simplex_projection_rowwise
 
@@ -32,6 +32,7 @@ class MRF():
     Graph class
     """
     def __init__(self, num_nodes=0, num_labels=0, directed=False, sparse=True):
+        self.is_compiled = False
         self.num_nodes = num_nodes
         self.num_labels = num_labels
         self.is_directed = directed
@@ -44,7 +45,12 @@ class MRF():
         self.nodePot = np.zeros(self.dim)
         if sparse:
             # self.edgePot = csr_matrix((self.dim, self.dim))
-            self.edgePot = lil_matrix((self.dim, self.dim))
+            # self.edgePot = lil_matrix((self.dim, self.dim))
+            # self.edgePot = dok_matrix((self.dim, self.dim))
+            # self.edgePot = np.zeros((self.dim, self.dim))
+            self.edgePot = []
+            self.edgePotRowIdx = []
+            self.edgePotColIdx = []
         else:
             self.edgePot = np.zeros((self.dim, self.dim))
     
@@ -70,18 +76,40 @@ class MRF():
         assert j <= (self.num_nodes - 1) and j >= 0
         L = self.num_labels
         assert pmatrix.shape == (L, L)
-        if e in self.edges or (not self.is_directed and (j, i) in self.edges):
-            print('The edge', e, 'already exists.')
+        self.edges.append((i, j))
+        self.neighbors[i].add(j)
+        self.neighbors[j].add(i)
+        if self.is_sparse:
+            # for a in range(L):
+            #     for b in range(L):
+            #         if pmatrix[a, b] != 0:
+            #             ia = i*L + a
+            #             jb = j*L + b
+            #             self.edgePot[ia, jb] = pmatrix[a, b]
+            self.edgePot.append(pmatrix.flatten())
+            self.edgePotRowIdx.append(np.repeat(np.arange(L) + i*L, L))
+            self.edgePotColIdx.append(np.tile(np.arange(L) + j*L, L))
         else:
-            self.edges.append((i, j))
-            self.neighbors[i].add(j)
-            self.neighbors[j].add(i)
-            for a in range(L):
-                for b in range(L):
-                    if pmatrix[a, b] != 0:
-                        ia = i*L + a
-                        jb = j*L + b
-                        self.edgePot[ia, jb] = pmatrix[a, b]
+            self.edgePot[i*L:(i+1)*L, j*L:(j+1)*L] = pmatrix
+
+    def compile(self):
+        """
+        Compile before optimization: changing data structures, etc.
+        """
+        # If the graph is sparse then convert to csr matrix for better performance
+        if self.is_sparse:
+            # self.edgePot = self.edgePot.tocsr()
+            self.edgePot = np.concatenate(self.edgePot)
+            self.edgePotRowIdx = np.concatenate(self.edgePotRowIdx)
+            self.edgePotColIdx = np.concatenate(self.edgePotColIdx)
+            # Remove zero elements
+            zero_indices = np.where(self.edgePot == 0)
+            self.edgePot = np.delete(self.edgePot, zero_indices)
+            self.edgePotRowIdx = np.delete(self.edgePotRowIdx, zero_indices)
+            self.edgePotColIdx = np.delete(self.edgePotColIdx, zero_indices)
+            self.edgePot = csr_matrix((self.edgePot, (self.edgePotRowIdx, self.edgePotColIdx)), shape=(self.dim, self.dim))
+        
+        self.is_compiled = True
 
     def energy(self, labels):
         """
@@ -110,9 +138,8 @@ class MRF():
         """
         MRF optimization, or MAP inference
         """
-        # If the graph is sparse then convert to csr matrix for better performance
-        if self.is_sparse:
-            self.edgePot = self.edgePot.tocsr()
+        if not self.is_compiled:
+            raise 'WARNING: model needs to be compiled first. Please run compile() before calling optimize().'
         if method == 'admm':
             labels = self.ADMM(X0, **kwargs)
         elif method == 'bcd':
@@ -143,9 +170,9 @@ class MRF():
         iter1 = int(kwargs.get('iter1', 10))
         iter2 = int(kwargs.get('iter2', 50))
         max_iter = int(kwargs.get('max_iter', 1000))
-        verbose = bool(kwargs.get('verbose', True))
+        verbose = bool(kwargs.get('verbose', False))
 
-        absMax = abs(self.edgePot).max()
+        absMax = max(abs(self.edgePot).max(), abs(self.nodePot).max())
         rho_min = rho_min*absMax
 
         n = self.dim
@@ -184,7 +211,7 @@ class MRF():
             x2_old = x2
             c2 = x1 + (y - P.dot(x1))/rho
             # C2 = c2.reshape((V, L))
-            # X2 = SimplexProjection(C2)
+            # X2 = unit_simplex_projection_rowwise(C2)
             # x2 = X2.flatten()
             x2 = np.maximum(c2, 0)
 

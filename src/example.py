@@ -54,6 +54,9 @@ def main():
     mrf.add_edge((0, 3), pmatrix)
     mrf.add_edge((1, 2), pmatrix)
 
+    # Compile the model (required before running optimize())
+    mrf.compile()
+
     # Run MAP inference with ADMM
     # These parameters are optional, but they can affect greatly the
     # running time as well as the solution quality (c.f. paper)
