@@ -42,11 +42,11 @@ def main():
 
     # Add edges to the graph, with corresponding potentials
 
-    # Potts model: f(a, a) = 0 and f(a, b) = 0.5 if a != b
+    # Potts model: f(a, a) = 0 and f(a, b) = lambda if a != b
     pmatrix = np.zeros((L, L)) + 0.5
     np.fill_diagonal(pmatrix, 0)
 
-    # inverse Potts model: f(a, a) = 0.5 and f(a, b) = 0 if a != b
+    # inverse Potts model: f(a, a) = lambda and f(a, b) = 0 if a != b
     # pmatrix = np.diag(np.zeros(L) + 0.5)
 
     mrf.add_edge((0, 1), pmatrix)
@@ -60,7 +60,7 @@ def main():
     # Run MAP inference with ADMM
     # These parameters are optional, but they can affect greatly the
     # running time as well as the solution quality (c.f. paper)
-    kwargs = {"rho_min": 0.01,
+    kwargs = {"rho_min": 0.0001,
               "step": 1.2,
               "precision": 1e-5,
               "iter1": 10,
@@ -70,9 +70,12 @@ def main():
              }
     labels = mrf.optimize(method='admm', **kwargs)
     print('labels =', labels)
+    print('energy =', mrf.energy(labels))
 
-    E = mrf.energy(labels)
-    print('Discrete energy = %f'%E)
+    # Check with brute force
+    labels_bf = mrf.optimize(method='bf')
+    print('brute-force labels =', labels_bf)
+    print('brute-foce energy =', mrf.energy(labels_bf))
 
 if __name__ == "__main__":
     main()

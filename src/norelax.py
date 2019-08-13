@@ -108,6 +108,7 @@ class MRF():
             self.edgePotRowIdx = np.delete(self.edgePotRowIdx, zero_indices)
             self.edgePotColIdx = np.delete(self.edgePotColIdx, zero_indices)
             self.edgePot = csr_matrix((self.edgePot, (self.edgePotRowIdx, self.edgePotColIdx)), shape=(self.dim, self.dim))
+            # print('Hello =', self.edgePot)
         
         self.is_compiled = True
 
@@ -144,10 +145,42 @@ class MRF():
             labels = self.ADMM(X0, **kwargs)
         elif method == 'bcd':
             labels = self.BCD(X0, **kwargs)
+        elif method == 'bf':
+            labels = self.BruteForce()
         else:
             raise "Method %s not supported!"%method
 
         return labels
+    
+    def BruteForce(self):
+        """
+        Bruce force: compute the energy for every possible labeling and compare
+        """
+        labels_best = np.zeros(self.num_nodes, dtype=int)
+        energy_best = self.energy(labels_best)
+        def Recurse(labels, node_idx):
+            nonlocal energy_best
+            nonlocal labels_best
+            for a in range (self.num_labels):
+                labels[node_idx] = a
+                if node_idx > 0:
+                    Recurse(labels, node_idx - 1)
+                else:
+                    energy = self.energy(labels)
+                    # print(labels, energy)
+                    if energy < energy_best:
+                        energy_best = energy
+                        labels_best = labels.copy()
+        
+        labels = np.zeros(self.num_nodes, dtype=int)
+        Recurse(labels, self.num_nodes - 1)
+        
+        # best_energy = 1e10
+        # for i in range(num_nodes):
+        #     for a in range(num_labels):
+        #         labels[i] = a
+        return labels_best
+
 
     def BCD(self, X0=None, **kwargs):
         """
